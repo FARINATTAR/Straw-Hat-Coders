@@ -5,7 +5,6 @@ from typing import List, Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, Query
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -50,16 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-connected_clients: List[WebSocket] = []
-
-
-async def broadcast(data: dict):
-    for client in connected_clients[:]:
-        try:
-            await client.send_json(data)
-        except Exception:
-            connected_clients.remove(client)
 
 
 def train_novel_engines(db):
@@ -260,38 +249,14 @@ def analyze_user(db: Session, user: User, window_hours: int = 24):
         "session_state": policy_engine.get_session_state(user.id),
         "activity_count": len(activities),
         "markov_score": round(markov_score, 3),
-        "markov_transitions": markov_transitions[:5],
         "stealth_score": round(stealth_score, 3),
-        "evasion_indicators": evasion_indicators[:5],
-        "contagion_spread": len(contagion_results),
         "credential_sharing_score": round(cred_score, 3),
-        "credential_sharing_indicators": cred_indicators[:5],
         "staging_score": round(staging_score, 3),
-        "staging_phase": staging_phase,
-        "staging_indicators": staging_indicators[:5],
         "ghost_score": round(ghost_score, 3),
-        "dormancy_days": dormancy_days,
-        "ghost_indicators": ghost_indicators[:5],
         "privilege_creep_score": round(creep_score, 3),
-        "privilege_sprawl_pct": sprawl_pct,
-        "creep_indicators": creep_indicators[:5],
-        "creep_recommendations": creep_recommendations[:5],
-        "kill_chain_phase": kc_phase,
-        "kill_chain_index": kc_idx,
-        "kill_chain_confidence": kc_confidence,
-        "kill_chain_phases": kc_phases,
         "biometric_score": round(biometric_score, 3),
-        "biometric_divergence": biometric_div,
-        "biometric_indicators": biometric_indicators[:3],
         "burst_score": round(burst_score, 3),
-        "num_bursts": num_bursts,
-        "max_burst_mb": max_burst_mb,
-        "burst_indicators": burst_indicators[:3],
         "entropy_score": round(entropy_score, 3),
-        "current_entropy": current_entropy,
-        "baseline_entropy": baseline_entropy,
-        "entropy_ratio": entropy_ratio,
-        "entropy_indicators": entropy_indicators[:3],
     }
 
 
@@ -302,58 +267,6 @@ def analyze_all_users(db: Session):
 
 
 # ── REST API Endpoints ──────────────────────────────────────────────
-
-@app.get("/api/dashboard")
-def get_dashboard(db: Session = Depends(get_db)):
-    """Main dashboard data with overview stats."""
-    users = db.query(User).all()
-    total_users = len(users)
-
-    latest_scores = {}
-    for user in users:
-        score = (
-            db.query(RiskScore)
-            .filter(RiskScore.user_id == user.id)
-            .order_by(desc(RiskScore.timestamp))
-            .first()
-        )
-        if score:
-            latest_scores[user.id] = score
-
-    risk_distribution = {"green": 0, "yellow": 0, "orange": 0, "red": 0}
-    for s in latest_scores.values():
-        risk_distribution[s.risk_level] = risk_distribution.get(s.risk_level, 0) + 1
-
-    total_alerts = db.query(Alert).filter(Alert.is_resolved == False).count()
-    critical_alerts = db.query(Alert).filter(Alert.severity == "critical", Alert.is_resolved == False).count()
-
-    total_logs = db.query(ActivityLog).count()
-    anomalous_logs = db.query(ActivityLog).filter(ActivityLog.is_anomalous == True).count()
-
-    avg_risk = 0
-    if latest_scores:
-        avg_risk = round(sum(s.score for s in latest_scores.values()) / len(latest_scores), 1)
-
-    ghost_count = 0
-    creep_count = 0
-    for user in users:
-        last = ghost_account_detector.last_activity.get(user.id)
-        if last and (datetime.utcnow() - last).days >= 14:
-            ghost_count += 1
-
-    return {
-        "total_users": total_users,
-        "risk_distribution": risk_distribution,
-        "total_alerts": total_alerts,
-        "critical_alerts": critical_alerts,
-        "total_activity_logs": total_logs,
-        "anomalous_logs": anomalous_logs,
-        "average_risk_score": avg_risk,
-        "anomaly_rate": round(anomalous_logs / max(total_logs, 1) * 100, 1),
-        "ghost_accounts": ghost_count,
-        "novel_detectors_active": 12,
-    }
-
 
 @app.get("/api/users")
 def get_users(db: Session = Depends(get_db)):
@@ -441,27 +354,14 @@ def get_user_detail(user_id: int, db: Session = Depends(get_db)):
         ],
         "recent_activities": [
             {
-                "id": a.id,
-                "timestamp": a.timestamp.isoformat(),
-                "action_type": a.action_type,
-                "resource": a.resource,
-                "location": a.location,
-                "device": a.device,
-                "data_volume_mb": a.data_volume_mb,
-                "is_anomalous": a.is_anomalous,
-                "anomaly_reasons": a.anomaly_reasons,
+                "id": a.id, "timestamp": a.timestamp.isoformat(), "action_type": a.action_type,
+                "resource": a.resource, "location": a.location, "device": a.device,
+                "data_volume_mb": a.data_volume_mb, "is_anomalous": a.is_anomalous,
             }
             for a in activities
         ],
         "alerts": [
-            {
-                "id": a.id,
-                "type": a.alert_type,
-                "severity": a.severity,
-                "message": a.message,
-                "timestamp": a.timestamp.isoformat(),
-                "is_resolved": a.is_resolved,
-            }
+            {"id": a.id, "type": a.alert_type, "severity": a.severity, "message": a.message, "timestamp": a.timestamp.isoformat(), "is_resolved": a.is_resolved}
             for a in alerts
         ],
         "session_state": policy_engine.get_session_state(user.id),
@@ -469,11 +369,7 @@ def get_user_detail(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/alerts")
-def get_alerts(
-    severity: Optional[str] = None,
-    resolved: Optional[bool] = None,
-    db: Session = Depends(get_db),
-):
+def get_alerts(severity: Optional[str] = None, resolved: Optional[bool] = None, db: Session = Depends(get_db)):
     """Get all alerts with optional filters."""
     query = db.query(Alert).order_by(desc(Alert.timestamp))
     if severity:
@@ -483,28 +379,14 @@ def get_alerts(
     alerts = query.limit(100).all()
 
     return [
-        {
-            "id": a.id,
-            "user_id": a.user_id,
-            "username": a.username,
-            "type": a.alert_type,
-            "severity": a.severity,
-            "message": a.message,
-            "timestamp": a.timestamp.isoformat(),
-            "is_resolved": a.is_resolved,
-            "action_taken": a.action_taken,
-        }
+        {"id": a.id, "user_id": a.user_id, "username": a.username, "type": a.alert_type, "severity": a.severity,
+         "message": a.message, "timestamp": a.timestamp.isoformat(), "is_resolved": a.is_resolved, "action_taken": a.action_taken}
         for a in alerts
     ]
 
 
 @app.get("/api/activity")
-def get_activity(
-    user_id: Optional[int] = None,
-    anomalous_only: bool = False,
-    limit: int = 50,
-    db: Session = Depends(get_db),
-):
+def get_activity(user_id: Optional[int] = None, anomalous_only: bool = False, limit: int = 50, db: Session = Depends(get_db)):
     """Get recent activity logs."""
     query = db.query(ActivityLog).order_by(desc(ActivityLog.timestamp))
     if user_id:
@@ -514,470 +396,13 @@ def get_activity(
     logs = query.limit(limit).all()
 
     return [
-        {
-            "id": a.id,
-            "user_id": a.user_id,
-            "username": a.username,
-            "timestamp": a.timestamp.isoformat(),
-            "action_type": a.action_type,
-            "resource": a.resource,
-            "location": a.location,
-            "device": a.device,
-            "data_volume_mb": a.data_volume_mb,
-            "is_anomalous": a.is_anomalous,
-            "anomaly_reasons": a.anomaly_reasons,
-        }
+        {"id": a.id, "user_id": a.user_id, "username": a.username, "timestamp": a.timestamp.isoformat(),
+         "action_type": a.action_type, "resource": a.resource, "location": a.location, "device": a.device,
+         "data_volume_mb": a.data_volume_mb, "is_anomalous": a.is_anomalous}
         for a in logs
     ]
 
 
-@app.get("/api/analytics")
-def get_analytics(db: Session = Depends(get_db)):
-    """Analytics data for charts."""
-    dept_risk = {}
-    users = db.query(User).all()
-    for user in users:
-        score = (
-            db.query(RiskScore)
-            .filter(RiskScore.user_id == user.id)
-            .order_by(desc(RiskScore.timestamp))
-            .first()
-        )
-        if score:
-            if user.department not in dept_risk:
-                dept_risk[user.department] = []
-            dept_risk[user.department].append(score.score)
-
-    dept_avg = {dept: round(sum(scores) / len(scores), 1) for dept, scores in dept_risk.items()}
-
-    hourly_activity = {}
-    logs = db.query(ActivityLog).all()
-    for log in logs:
-        hour = log.timestamp.hour
-        if hour not in hourly_activity:
-            hourly_activity[hour] = {"total": 0, "anomalous": 0}
-        hourly_activity[hour]["total"] += 1
-        if log.is_anomalous:
-            hourly_activity[hour]["anomalous"] += 1
-
-    hourly_data = [
-        {"hour": h, "total": d["total"], "anomalous": d["anomalous"]}
-        for h, d in sorted(hourly_activity.items())
-    ]
-
-    action_dist = {}
-    for log in logs:
-        action_dist[log.action_type] = action_dist.get(log.action_type, 0) + 1
-
-    daily_risk = {}
-    all_scores = db.query(RiskScore).order_by(RiskScore.timestamp).all()
-    for s in all_scores:
-        day = s.timestamp.strftime("%Y-%m-%d")
-        if day not in daily_risk:
-            daily_risk[day] = []
-        daily_risk[day].append(s.score)
-
-    daily_avg = [
-        {"date": day, "avg_risk": round(sum(scores) / len(scores), 1), "max_risk": round(max(scores), 1)}
-        for day, scores in sorted(daily_risk.items())
-    ][-30:]
-
-    top_risky = (
-        db.query(RiskScore)
-        .order_by(desc(RiskScore.score))
-        .limit(5)
-        .all()
-    )
-    top_risky_enriched = []
-    for s in top_risky:
-        u = db.query(User).filter(User.id == s.user_id).first()
-        top_risky_enriched.append({
-            "user_id": s.user_id,
-            "username": s.username,
-            "full_name": u.full_name if u else s.username,
-            "department": u.department if u else "",
-            "role": u.role if u else "",
-            "score": s.score,
-            "level": s.risk_level,
-        })
-
-    network_nodes = []
-    network_links = []
-    seen_users = set()
-    for user in users:
-        latest = db.query(RiskScore).filter(RiskScore.user_id == user.id).order_by(desc(RiskScore.timestamp)).first()
-        if latest:
-            network_nodes.append({
-                "id": user.id, "name": user.full_name, "username": user.username,
-                "department": user.department, "score": latest.score, "level": latest.risk_level,
-            })
-            seen_users.add(user.id)
-    for uid in seen_users:
-        conns = contagion_graph.get_user_connections(uid)
-        for c in conns[:3]:
-            if c["user_id"] in seen_users:
-                link_id = tuple(sorted([uid, c["user_id"]]))
-                network_links.append({
-                    "source": link_id[0], "target": link_id[1],
-                    "similarity": c.get("similarity", 0),
-                })
-    unique_links = {}
-    for l in network_links:
-        key = (l["source"], l["target"])
-        if key not in unique_links:
-            unique_links[key] = l
-    network_links = list(unique_links.values())
-
-    return {
-        "department_risk": dept_avg,
-        "hourly_activity": hourly_data,
-        "action_distribution": action_dist,
-        "daily_risk_trend": daily_avg,
-        "top_risky_users": top_risky_enriched,
-        "contagion_network": {"nodes": network_nodes, "links": network_links},
-    }
-
-
-@app.get("/api/contagion/{user_id}")
-def get_contagion_graph(user_id: int, db: Session = Depends(get_db)):
-    """Get risk contagion network for a user."""
-    connections = contagion_graph.get_user_connections(user_id)
-    enriched = []
-    for conn in connections[:10]:
-        neighbor = db.query(User).filter(User.id == conn["user_id"]).first()
-        if neighbor:
-            score = db.query(RiskScore).filter(RiskScore.user_id == conn["user_id"]).order_by(desc(RiskScore.timestamp)).first()
-            enriched.append({
-                "user_id": conn["user_id"],
-                "username": neighbor.username,
-                "full_name": neighbor.full_name,
-                "department": neighbor.department,
-                "similarity": conn["similarity"],
-                "risk_score": score.score if score else 0,
-                "risk_level": score.risk_level if score else "green",
-            })
-    return {"user_id": user_id, "connections": enriched}
-
-
-@app.get("/api/report/{user_id}")
-def generate_pdf_report(user_id: int, db: Session = Depends(get_db)):
-    """Generate a professional PDF threat assessment report for a user."""
-    import io
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return {"error": "User not found"}
-
-    latest = db.query(RiskScore).filter(RiskScore.user_id == user_id).order_by(desc(RiskScore.timestamp)).first()
-    activities = db.query(ActivityLog).filter(
-        ActivityLog.user_id == user_id, ActivityLog.is_anomalous == True
-    ).order_by(desc(ActivityLog.timestamp)).limit(15).all()
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=15*mm, leftMargin=15*mm, rightMargin=15*mm)
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title2', parent=styles['Title'], fontSize=22, textColor=colors.HexColor('#1e293b'), spaceAfter=4)
-    subtitle_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#64748b'), spaceAfter=12)
-    heading_style = ParagraphStyle('H2', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1e40af'), spaceBefore=16, spaceAfter=8)
-    body_style = ParagraphStyle('Body2', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#334155'), leading=14)
-    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#94a3b8'))
-
-    elements = []
-
-    elements.append(Paragraph("ZEROMIND THREAT ASSESSMENT", title_style))
-    elements.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} | Intelligent Zero Trust Security System", subtitle_style))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
-    elements.append(Spacer(1, 8))
-
-    elements.append(Paragraph("User Profile", heading_style))
-    profile_data = [
-        ["Full Name", user.full_name, "Username", f"@{user.username}"],
-        ["Department", user.department, "Role", user.role],
-        ["Typical Login", f"{user.typical_login_hour}:00", "Location", user.typical_location],
-        ["Email", user.email, "Status", "Active" if user.is_active else "Inactive"],
-    ]
-    profile_table = Table(profile_data, colWidths=[80, 150, 80, 150])
-    profile_table.setStyle(TableStyle([
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
-        ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#64748b')),
-        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#1e293b')),
-        ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor('#1e293b')),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (3, 0), (3, -1), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
-    ]))
-    elements.append(profile_table)
-
-    elements.append(Paragraph("Risk Assessment", heading_style))
-    score = latest.score if latest else 0
-    level = latest.risk_level if latest else "green"
-    level_color = {'red': '#dc2626', 'orange': '#ea580c', 'yellow': '#ca8a04', 'green': '#16a34a'}.get(level, '#16a34a')
-
-    risk_data = [
-        ["Risk Score", f"{score}/100"],
-        ["Risk Level", level.upper()],
-        ["Action Taken", latest.action_taken if latest else "Normal monitoring"],
-    ]
-    risk_table = Table(risk_data, colWidths=[120, 340])
-    risk_table.setStyle(TableStyle([
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
-        ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor(level_color)),
-        ('FONTNAME', (1, 0), (1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (1, 0), (1, 0), 16),
-        ('TEXTCOLOR', (1, 1), (1, 1), colors.HexColor(level_color)),
-        ('FONTNAME', (1, 1), (1, 1), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(risk_table)
-
-    if latest and latest.narrative:
-        elements.append(Paragraph("Threat Narrative", heading_style))
-        elements.append(Paragraph(latest.narrative, body_style))
-
-    if latest and latest.contributing_factors:
-        factors = json.loads(latest.contributing_factors)
-        if factors:
-            elements.append(Paragraph("Contributing Factors", heading_style))
-            factor_data = [["Factor", "Value", "Contribution", "Weight"]]
-            for f in factors[:12]:
-                factor_data.append([
-                    f.get("factor", "")[:50],
-                    str(f.get("value", "")),
-                    f"{f.get('contribution', 0)}%",
-                    str(f.get("weight", "")),
-                ])
-            factor_table = Table(factor_data, colWidths=[220, 60, 80, 60])
-            factor_table.setStyle(TableStyle([
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-            ]))
-            elements.append(factor_table)
-
-    if activities:
-        elements.append(Paragraph("Recent Anomalous Activities", heading_style))
-        act_data = [["Time", "Action", "Resource", "Volume (MB)"]]
-        for a in activities[:10]:
-            act_data.append([
-                a.timestamp.strftime('%m/%d %H:%M'),
-                a.action_type,
-                (a.resource or "")[:30],
-                f"{a.data_volume_mb:.1f}" if a.data_volume_mb > 0 else "-",
-            ])
-        act_table = Table(act_data, colWidths=[80, 80, 200, 70])
-        act_table.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dc2626')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#fef2f2')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ]))
-        elements.append(act_table)
-
-    elements.append(Spacer(1, 20))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#e2e8f0')))
-    elements.append(Paragraph("ZeroMind | Intelligent Zero Trust Security System | 12 AI Detection Engines | Straw Hat Coders", small_style))
-
-    doc.build(elements)
-    buffer.seek(0)
-
-    return StreamingResponse(
-        buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=zeromind_report_{user.username}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"}
-    )
-
-
-@app.get("/api/coordinated_attacks")
-def get_coordinated_attacks():
-    """Check for coordinated attack patterns across users."""
-    is_coord, score, users, indicators = coordinated_attack_detector.detect()
-    return {
-        "is_coordinated": is_coord,
-        "coordination_score": score,
-        "correlated_users": [{"user_id": u["user_id"], "username": u["username"], "score": u["score"]} for u in users[:10]],
-        "indicators": indicators,
-        "total_risk_events": len(coordinated_attack_detector.risk_events),
-    }
-
-
-@app.post("/api/simulate/{scenario}")
-async def simulate_scenario(scenario: str, db: Session = Depends(get_db)):
-    """Trigger a live demo scenario and broadcast results via WebSocket."""
-    from data_generator import (
-        inject_anomalies_data_exfiltrator,
-        inject_anomalies_compromised_account,
-        inject_anomalies_slow_insider,
-        inject_credential_sharing,
-        inject_data_staging,
-        inject_ghost_account,
-        inject_privilege_creep,
-        inject_kill_chain,
-        inject_biometric_shift,
-        inject_coordinated_attack,
-        inject_micro_burst,
-        inject_entropy_spike,
-    )
-
-    now = datetime.utcnow()
-    result = None
-
-    if scenario == "data_exfiltrator":
-        user = db.query(User).filter(User.username == "bob.johnson").first()
-        if user:
-            inject_anomalies_data_exfiltrator(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "compromised_account":
-        user = db.query(User).filter(User.username == "eve.jones").first()
-        if user:
-            inject_anomalies_compromised_account(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "slow_insider":
-        user = db.query(User).filter(User.username == "henry.davis").first()
-        if user:
-            inject_anomalies_slow_insider(db, user, now)
-            result = analyze_user(db, user, window_hours=200)
-    elif scenario == "credential_sharing":
-        user = db.query(User).filter(User.username == "charlie.williams").first()
-        if user:
-            inject_credential_sharing(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "data_staging":
-        user = db.query(User).filter(User.username == "diana.brown").first()
-        if user:
-            inject_data_staging(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "ghost_account":
-        user = db.query(User).filter(User.username == "ivy.rodriguez").first()
-        if user:
-            inject_ghost_account(db, user, now)
-            ghost_account_detector.last_activity[user.id] = now - timedelta(days=25)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "privilege_creep":
-        user = db.query(User).filter(User.username == "jack.martinez").first()
-        if user:
-            inject_privilege_creep(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "kill_chain":
-        user = db.query(User).filter(User.username == "nathan.wilson").first()
-        if user:
-            inject_kill_chain(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "biometric_shift":
-        user = db.query(User).filter(User.username == "olivia.anderson").first()
-        if user:
-            inject_biometric_shift(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "coordinated_attack":
-        inject_coordinated_attack(db, now)
-        results_list = []
-        for uname in ["karen.hernandez", "leo.lopez", "mona.gonzalez"]:
-            u = db.query(User).filter(User.username == uname).first()
-            if u:
-                r = analyze_user(db, u, window_hours=24)
-                if r:
-                    results_list.append(r)
-                    await broadcast({"type": "risk_update", "data": r})
-        is_coord, coord_score, coord_users, coord_indicators = coordinated_attack_detector.detect()
-        coord_result = {
-            "scenario": "coordinated_attack",
-            "coordination_detected": is_coord,
-            "coordination_score": coord_score,
-            "users_compromised": len(results_list),
-            "indicators": coord_indicators,
-            "user_results": results_list,
-            "risk_score": max((r["risk_score"] for r in results_list), default=0),
-            "risk_level": "red" if is_coord else "orange",
-            "narrative": "; ".join(coord_indicators) if coord_indicators else "Coordinated attack simulation executed",
-            "session_state": "terminated",
-            "policy_actions": ["Session terminated for all compromised accounts"],
-        }
-        await broadcast({"type": "alert", "data": {
-            "username": "MULTI-USER",
-            "risk_score": coord_result["risk_score"],
-            "risk_level": coord_result["risk_level"],
-            "narrative": coord_result["narrative"],
-            "actions": coord_result["policy_actions"],
-        }})
-        return coord_result
-    elif scenario == "micro_burst":
-        user = db.query(User).filter(User.username == "paul.thomas").first()
-        if user:
-            inject_micro_burst(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    elif scenario == "entropy_spike":
-        user = db.query(User).filter(User.username == "quinn.taylor").first()
-        if user:
-            inject_entropy_spike(db, user, now)
-            result = analyze_user(db, user, window_hours=24)
-    else:
-        return {"error": f"Unknown scenario: {scenario}"}
-
-    if result:
-        await broadcast({"type": "risk_update", "data": result})
-        await broadcast({
-            "type": "alert",
-            "data": {
-                "username": result["username"],
-                "risk_score": result["risk_score"],
-                "risk_level": result["risk_level"],
-                "narrative": result["narrative"],
-                "actions": result["policy_actions"],
-            },
-        })
-    return result or {"error": "User not found for scenario"}
-
-
-@app.post("/api/analyze")
-async def trigger_analysis(db: Session = Depends(get_db)):
-    """Re-run analysis on all users."""
-    users = db.query(User).all()
-    results = []
-    for user in users:
-        result = analyze_user(db, user)
-        if result:
-            results.append(result)
-            await broadcast({"type": "risk_update", "data": result})
-    return {"analyzed": len(results)}
-
-
-# ── WebSocket ────────────────────────────────────────────────────────
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    connected_clients.append(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            msg = json.loads(data)
-            if msg.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
-    except WebSocketDisconnect:
-        connected_clients.remove(websocket)
-
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
