@@ -1,0 +1,130 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{longtable}
+
+\title{\textbf{ZeroMind - Hackathon Q\&A Preparation Guide}}
+\author{Straw Hat Coders}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{SECTION 1: BASIC PROJECT QUESTIONS}
+
+\textbf{Q: What is your project about?} \\
+A: "Our project ZeroMind is an AI-powered Intelligent Zero Trust Security System. It detects insider threats — meaning threats that come from within the organization, like an employee whose account got hacked, or an employee who is intentionally stealing data. Traditional systems just check passwords and block obvious attacks. But our system actually learns how each employee normally behaves — what time they login, which files they access, how much data they download — and then flags any deviation from that normal pattern in real-time."
+\vspace{10pt}
+
+\textbf{Q: What problem does it solve?} \\
+A: "In most companies, the biggest security risk isn't hackers from outside — it's authorized users misusing their access. A traditional firewall can't tell you that your trusted employee is slowly copying sensitive files over 7 days. Our system can, because it tracks behavioral deviation, not just network packets. We assign every user a Dynamic Risk Score from 0 to 100, and if it crosses 80, the system automatically locks their account and alerts the admin."
+\vspace{10pt}
+
+\textbf{Q: What is your tech stack?} \\
+A: "Backend is Python with FastAPI for the REST API. For machine learning, we're using Scikit-learn — specifically the Isolation Forest algorithm for unsupervised anomaly detection. Database is SQLite with SQLAlchemy as the ORM. Frontend is React with Vite as the build tool, and we use Recharts for data visualization. For real-time communication between backend and frontend, we use WebSockets."
+\vspace{10pt}
+
+\textbf{Q: What is Zero Trust?} \\
+A: "Zero Trust is a security framework where no one is trusted by default — not even employees inside the organization. Every access request is verified, every action is monitored. Traditional systems trust you once you enter your password. Zero Trust says — okay you entered your password, but I'm still going to watch what you do after that. That's exactly what our system does."
+\vspace{10pt}
+
+
+\section*{SECTION 2: DATA \& DATASET QUESTIONS}
+
+\textbf{Q: What dataset did you use?} \\
+A: "We built our own synthetic data generator. It simulates 20 employees working normally for 30 days — logging in, accessing files, downloading data — and then we inject 12 different attack scenarios on top of that normal activity."
+\vspace{10pt}
+
+\textbf{Q: Why did you use synthetic data instead of a real dataset?} \\
+A: "Three reasons. First, real insider threat datasets like the CERT dataset are extremely confidential and hard to access — they contain actual employee behavior which is a privacy violation. Second, with synthetic data, we can inject specific, controlled attack patterns and have clean ground-truth labels, which lets us accurately measure our model's detection accuracy. Third, in a 24-hour hackathon, cleaning and preprocessing a real dataset would have taken too much time. Synthetic data generation is actually an industry-standard approach for security research prototyping."
+\vspace{10pt}
+
+\textbf{Q: What are the 12 attack scenarios you simulate?} \\
+A: "We simulate a comprehensive range of insider threats:
+\begin{enumerate}[itemsep=2pt,parsep=0pt]
+    \item \textbf{Data Exfiltration} — bulk downloading sensitive files at unusual hours
+    \item \textbf{Compromised Account} — impossible travel (Mumbai to London in 5 mins)
+    \item \textbf{Slow Insider} — gradually escalating unauthorized access
+    \item \textbf{Credential Sharing} — two different IPs using the same account
+    \item \textbf{Pre-exfiltration Data Staging} — hoarding files
+    \item \textbf{Ghost Account Resurrection} — dormant account becoming active
+    \item \textbf{Privilege Creep} — accessing resources outside department
+    \item \textbf{Full Kill Chain} — reconnaissance to exfiltration
+    \item \textbf{Biometric/Rhythm Shift} — operator change mid-session
+    \item \textbf{Coordinated APT Attack} — multiple accounts compromised
+    \item \textbf{Micro-burst Exfiltration} — hidden high-volume data bursts
+    \item \textbf{Entropy Spike} — sudden access to highly diverse resources
+\end{enumerate}"
+\vspace{10pt}
+
+
+\section*{SECTION 3: ML \& AI QUESTIONS}
+
+\textbf{Q: What ML algorithm did you use and why?} \\
+A: "We use Isolation Forest, which is an unsupervised machine learning algorithm. We chose it because insider threats are rare events — we can't train a supervised model because we don't have enough labeled attack examples in real life. Isolation Forest works by randomly partitioning data points — anomalies are easier to isolate because they have extreme values. The fewer splits needed to isolate a data point, the more anomalous it is."
+\vspace{10pt}
+
+\textbf{Q: What is Behavioral DNA?} \\
+A: "Behavioral DNA is our custom concept. For every user, we build a statistical profile of their normal behavior based on 30 days of historical activity. This profile captures their mean login time, standard deviation of login time, average session duration, typical data download volume, list of resources they normally access, their usual locations, and their usual devices. This profile becomes their unique behavioral fingerprint — their DNA."
+\vspace{10pt}
+
+\textbf{Q: What is your ensemble approach?} \\
+A: "We don't rely on a single scoring method. We combine two independent approaches: 60\% weight goes to the Isolation Forest anomaly score, and 40\% weight goes to a Weighted Z-Score (a statistical measure of deviation). By combining both, we reduce false positives significantly."
+\vspace{10pt}
+
+\textbf{Q: What is Peer Group Analysis?} \\
+A: "We don't just compare a user to their own history. We also compare them against their entire department. If every Marketing employee downloads about 5 MB per day, but one Marketing person suddenly downloads 200 MB — our system flags it because within their peer group, it's abnormal."
+\vspace{10pt}
+
+
+\section*{SECTION 4: RISK ENGINE QUESTIONS}
+
+\textbf{Q: What is Compounding and Decay in your Risk Engine?} \\
+A: "Compounding means if a user was suspicious yesterday AND suspicious today, their score multiplies by 1.3x. Repeated suspicious behavior gets punished progressively harder. Decay means if a user was flagged last week but has been completely normal for several days, their score slowly decreases by 5\% each evaluation cycle. This makes our scoring truly dynamic."
+\vspace{10pt}
+
+\textbf{Q: What is Explainable AI and how do you implement it?} \\
+A: "Most AI systems are black boxes — they give you a number but don't tell you why. Our system implements Explainable AI through our Narrative Generator. For every alert, it produces a human-readable explanation, like: `User bob flagged for data exfiltration. Logged in at 3 AM, downloaded 187 MB. Action: Block account.' The admin doesn't need to be a data scientist to understand the threat."
+\vspace{10pt}
+
+
+\section*{SECTION 5: HONEYPOT \& DIFFERENTIATORS}
+
+\textbf{Q: What are honeypots?} \\
+A: "Honeypots are fake sensitive files that we plant inside the system — like `passwords\_backup.xlsx'. No legitimate employee would ever need to access these files. So if anyone touches them, it's an immediate red flag — their risk score jumps to 90+ instantly."
+\vspace{10pt}
+
+\textbf{Q: What makes your project unique?} \\
+A: "Three things. First, our Behavioral DNA concept. Second, our 12 distinct attack scenarios. Third, our Explainable AI narrative generator that translates math into English for the admin."
+\vspace{10pt}
+
+
+\section*{SECTION 6: QUICK FIRE ANSWERS}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Question} & \textbf{One-line Answer} \\
+\hline
+ML Model? & Isolation Forest (unsupervised) \\
+\hline
+Why unsupervised? & Because insider threats are rare — not enough labeled attack data \\
+\hline
+Training data? & 30 days of simulated normal user activity \\
+\hline
+Database? & SQLite with SQLAlchemy ORM \\
+\hline
+API Framework? & FastAPI (Python) \\
+\hline
+Frontend? & React + Vite + Recharts \\
+\hline
+Risk Score range? & 0 to 100, dynamic with compounding and decay \\
+\hline
+Explainable AI? & Yes, narrative generator for every alert \\
+\hline
+\end{longtable}
+
+\end{document}
