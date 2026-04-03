@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useWebSocket } from './hooks/useWebSocket';
+// import { useWebSocket } from './hooks/useWebSocket';
 import { api } from './utils/api';
 import Dashboard from './components/Dashboard';
 import UserList from './components/UserList';
@@ -17,7 +17,9 @@ export default function App() {
     const [users, setUsers] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [toasts, setToasts] = useState([]);
-    const { lastMessage, isConnected } = useWebSocket();
+    // const { lastMessage, isConnected } = useWebSocket();
+    const lastMessage = null;
+    const isConnected = false;
 
     const loadData = useCallback(async () => {
         try {
@@ -69,9 +71,9 @@ export default function App() {
                 {page === 'user-detail' && selectedUserId && (
                     <UserDetail userId={selectedUserId} onBack={() => setPage('users')} />
                 )}
-                {page === 'alerts' && (
+                {/* {page === 'alerts' && (
                     <AlertPanel alerts={alerts} onRefresh={loadData} onUserClick={openUser} />
-                )}
+                )} */}
                 {page === 'analytics' && <Analytics onUserClick={openUser} />}
                 {page === 'simulate' && <SimulationPanel onRefresh={loadData} />}
             </main>
