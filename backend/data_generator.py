@@ -684,6 +684,7 @@ def generate_all_data():
         total_logs += count
     print(f"Generated {total_logs} normal activity logs")
 
+    # ── RED ZONE (High-risk attackers: ~6 users) ──────────────────────
     print("Injecting anomaly scenario 1: Data Exfiltrator (user: bob.johnson)...")
     exfiltrator = db.query(User).filter(User.username == "bob.johnson").first()
     if exfiltrator:
@@ -696,11 +697,58 @@ def generate_all_data():
         c = inject_anomalies_compromised_account(db, compromised, now)
         print(f"  Injected {c} anomalous logs")
 
+    print("Injecting anomaly scenario 8: Kill Chain (user: charlie.williams)...")
+    kc_user = db.query(User).filter(User.username == "charlie.williams").first()
+    if kc_user:
+        c = inject_kill_chain(db, kc_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario 4: Credential Sharing (user: frank.garcia)...")
+    cred_user = db.query(User).filter(User.username == "frank.garcia").first()
+    if cred_user:
+        c = inject_credential_sharing(db, cred_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario 6: Ghost Account (user: jack.martinez)...")
+    ghost_user = db.query(User).filter(User.username == "jack.martinez").first()
+    if ghost_user:
+        c = inject_ghost_account(db, ghost_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario 10: Coordinated Attack (karen, leo, mona)...")
+    c = inject_coordinated_attack(db, now)
+    print(f"  Injected {c} anomalous logs")
+
+    # ── ORANGE ZONE (Moderate-risk: ~4 users) ───────────────────────
     print("Injecting anomaly scenario 3: Slow Insider (user: henry.davis)...")
     insider = db.query(User).filter(User.username == "henry.davis").first()
     if insider:
         c = inject_anomalies_slow_insider(db, insider, now)
         print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario 7: Privilege Creep (user: ivy.rodriguez)...")
+    priv_user = db.query(User).filter(User.username == "ivy.rodriguez").first()
+    if priv_user:
+        c = inject_privilege_creep(db, priv_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    # ── YELLOW ZONE (Low-risk suspicious: ~4 users) ─────────────────
+    print("Injecting anomaly scenario 9: Biometric Shift (user: nathan.anderson)...")
+    bio_user = db.query(User).filter(User.username == "nathan.anderson").first()
+    if bio_user:
+        c = inject_biometric_shift(db, bio_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario 12: Entropy Spike (user: tina.martin)...")
+    entropy_user = db.query(User).filter(User.username == "tina.martin").first()
+    if entropy_user:
+        c = inject_entropy_spike(db, entropy_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    # ── GREEN ZONE (Clean users: ~6 users) ──────────────────────────
+    # alice.smith, diana.brown, grace.miller, olivia.thomas, paul.taylor,
+    # quinn.moore, rachel.jackson, steve.martin → No anomalies injected
+    print("Remaining users have only normal activity (GREEN zone).")
 
     final_count = db.query(ActivityLog).count()
     print(f"\nTotal activity logs in database: {final_count}")
