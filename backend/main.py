@@ -978,6 +978,17 @@ async def websocket_endpoint(websocket: WebSocket):
         connected_clients.remove(websocket)
 
 
+@app.get("/api/dashboard/summary")
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    """Lightweight endpoint for high-level dashboard metrics."""
+    return {
+        "active_monitors": 12,
+        "system_status": "healthy",
+        "last_refresh": datetime.utcnow().isoformat(),
+        "total_users_scored": db.query(User).count()
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
