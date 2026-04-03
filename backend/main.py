@@ -620,12 +620,14 @@ def get_analytics(db: Session = Depends(get_db)):
     seen_users = set()
     for user in users:
         latest = db.query(RiskScore).filter(RiskScore.user_id == user.id).order_by(desc(RiskScore.timestamp)).first()
-        if latest:
-            network_nodes.append({
-                "id": user.id, "name": user.full_name, "username": user.username,
-                "department": user.department, "score": latest.score, "level": latest.risk_level,
-            })
-            seen_users.add(user.id)
+        score = latest.score if latest else 0
+        level = latest.risk_level if latest else "green"
+        
+        network_nodes.append({
+            "id": user.id, "name": user.full_name, "username": user.username,
+            "department": user.department, "score": score, "level": level,
+        })
+        seen_users.add(user.id)
     for uid in seen_users:
         conns = contagion_graph.get_user_connections(uid)
         for c in conns[:3]:
