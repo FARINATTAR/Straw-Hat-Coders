@@ -145,16 +145,18 @@ def analyze_user(db: Session, user: User, window_hours: int = 24):
     burst_score, num_bursts, max_burst_mb, burst_indicators = micro_burst_detector.detect(user.id, activities)
     entropy_score, current_entropy, baseline_entropy, entropy_ratio, entropy_indicators = entropy_monitor.detect(user.id, activities)
 
-    novel_boost = (markov_score * 0.10) + (stealth_score * 0.06) + (cred_score * 0.12) + \
-                  (staging_score * 0.10) + (ghost_score * 0.12) + (creep_score * 0.06) + \
-                  (biometric_score * 0.08) + (burst_score * 0.10) + (entropy_score * 0.06)
+    novel_boost = (markov_score * 0.06) + (stealth_score * 0.04) + (cred_score * 0.08) + \
+                  (staging_score * 0.06) + (ghost_score * 0.08) + (creep_score * 0.04) + \
+                  (biometric_score * 0.05) + (burst_score * 0.06) + (entropy_score * 0.04)
 
     # Only apply novel boost if base ML score already indicates suspicious behavior
     # This prevents normal users from getting inflated risk scores
-    if anomaly_score < 0.3:
-        novel_boost *= 0.15  # Minimal boost for clean users
+    if anomaly_score < 0.2:
+        novel_boost *= 0.05  # Near-zero boost for clean users
+    elif anomaly_score < 0.35:
+        novel_boost *= 0.15  # Minimal boost for low-suspicion users
     elif anomaly_score < 0.5:
-        novel_boost *= 0.5   # Moderate boost for mildly suspicious users
+        novel_boost *= 0.4   # Moderate boost for mildly suspicious users
 
     anomaly_score = min(1.0, anomaly_score + novel_boost)
 
@@ -332,15 +334,7 @@ def get_dashboard(db: Session = Depends(get_db)):
     for user in users:
         s = latest_scores.get(user.id)
         if s:
-            if s.score >= 80 and risk_distribution.get("red", 0) > 4:
-                if user.id % 3 == 0:
-                    risk_distribution["orange"] += 1
-                elif user.id % 2 == 0:
-                    risk_distribution["yellow"] += 1
-                else:
-                    risk_distribution["red"] += 1
-            else:
-                risk_distribution[s.risk_level] = risk_distribution.get(s.risk_level, 0) + 1
+            risk_distribution[s.risk_level] = risk_distribution.get(s.risk_level, 0) + 1
         else:
             risk_distribution["green"] += 1
 
@@ -626,12 +620,14 @@ def get_analytics(db: Session = Depends(get_db)):
     seen_users = set()
     for user in users:
         latest = db.query(RiskScore).filter(RiskScore.user_id == user.id).order_by(desc(RiskScore.timestamp)).first()
-        if latest:
-            network_nodes.append({
-                "id": user.id, "name": user.full_name, "username": user.username,
-                "department": user.department, "score": latest.score, "level": latest.risk_level,
-            })
-            seen_users.add(user.id)
+        score = latest.score if latest else 0
+        level = latest.risk_level if latest else "green"
+        
+        network_nodes.append({
+            "id": user.id, "name": user.full_name, "username": user.username,
+            "department": user.department, "score": score, "level": level,
+        })
+        seen_users.add(user.id)
     for uid in seen_users:
         conns = contagion_graph.get_user_connections(uid)
         for c in conns[:3]:

@@ -4,88 +4,67 @@ import { api } from '../utils/api';
 
 const SCENARIOS = [
   {
-    id: 'data_exfiltrator', title: 'The Data Exfiltrator',
-    description: 'Normal employee (bob.johnson) suddenly downloads 500MB of sensitive files at 2 AM.',
+    id: 'data_exfiltrator', title: 'Rogue Employee (Data Theft)',
+    description: 'Detects an employee downloading massive amounts of sensitive files in the middle of the night.',
     icon: Zap, iconColor: 'text-rose-400', cardBg: 'bg-rose-50/60', borderColor: 'border-rose-200',
     user: 'bob.johnson',
     details: ['Off-hours login at 2:30 AM', '47 sensitive file downloads in 15 min', 'Abnormal data volume (500MB+)', 'Session auto-terminated'],
   },
   {
-    id: 'compromised_account', title: 'Compromised Account',
-    description: 'User (eve.jones) logs in from Russia via VPN, accesses cross-department resources, triggers honeypot.',
+    id: 'compromised_account', title: 'Stolen Credentials (VPN)',
+    description: 'Detects a hacker logging in from an unfamiliar country and trying to access restricted folders.',
     icon: UserX, iconColor: 'text-purple-400', cardBg: 'bg-purple-50/60', borderColor: 'border-purple-200',
     user: 'eve.jones',
     details: ['Login from "Unknown VPN, Russia"', 'Unknown device detected', 'HONEYPOT trap triggered', 'Immediate account lockout'],
   },
   {
-    id: 'slow_insider', title: 'The Slow Insider',
-    description: 'User (henry.davis) gradually escalates access over 7 days — catches what rule-based systems miss.',
+    id: 'slow_insider', title: 'The "Slow" Insider Threat',
+    description: 'Detects an employee slowly hoarding access to files over several days to avoid triggering alarms.',
     icon: TrendingUp, iconColor: 'text-amber-400', cardBg: 'bg-amber-50/60', borderColor: 'border-amber-200',
     user: 'henry.davis',
     details: ['Gradual scope expansion over 7 days', 'Cross-department access increases daily', 'Peer group deviation detected', 'Behavioral DNA shift identified'],
   },
   {
-    id: 'credential_sharing', title: 'Credential Sharing',
-    description: 'Same account (charlie.williams) used from Mumbai AND London simultaneously.',
+    id: 'credential_sharing', title: 'Impossible Travel (Shared Password)',
+    description: 'Detects the same account being used from two completely different countries at the exact same time.',
     icon: Users, iconColor: 'text-sky-400', cardBg: 'bg-sky-50/60', borderColor: 'border-sky-200',
     user: 'charlie.williams', badge: 'NOVEL',
     details: ['IMPOSSIBLE TRAVEL: Mumbai to London in 5 min', 'Concurrent sessions from different IPs', 'Behavioral velocity shift (3x+ change)'],
   },
   {
-    id: 'data_staging', title: 'Data Staging (Pre-Exfil)',
-    description: 'User (diana.brown) quietly collects files from 3 departments before exfiltration.',
+    id: 'data_staging', title: 'Data Hoarding (Pre-Theft)',
+    description: 'Detects an attacker quietly gathering files into a single location before attempting to steal them.',
     icon: Database, iconColor: 'text-emerald-400', cardBg: 'bg-emerald-50/60', borderColor: 'border-emerald-200',
     user: 'diana.brown', badge: 'NOVEL',
     details: ['Resource diversity explosion (25+ resources)', 'Cross-department data collection', 'Aggregation velocity spike'],
   },
   {
-    id: 'ghost_account', title: 'Ghost Account Resurrection',
-    description: 'Dormant account (ivy.rodriguez) wakes up after 20+ days of silence.',
+    id: 'ghost_account', title: 'Dead Account Hijack',
+    description: 'Detects an old, inactive employee account suddenly waking up and instantly accessing sensitive files.',
     icon: Ghost, iconColor: 'text-violet-400', cardBg: 'bg-violet-50/60', borderColor: 'border-violet-200',
     user: 'ivy.rodriguez', badge: 'NOVEL',
     details: ['Account dormant 20+ days', 'Sudden reactivation from anonymous proxy', 'Immediate sensitive file access'],
   },
   {
-    id: 'privilege_creep', title: 'Privilege Creep',
-    description: 'User (jack.martinez) accessing resources from 2 other departments.',
-    icon: KeyRound, iconColor: 'text-pink-400', cardBg: 'bg-pink-50/60', borderColor: 'border-pink-200',
-    user: 'jack.martinez', badge: 'NOVEL',
-    details: ['Accessing resources outside assigned role', 'Low Role Fit Score', 'Permission sprawl across departments'],
-  },
-  {
-    id: 'kill_chain', title: 'Kill Chain Progression',
-    description: 'User (nathan.wilson) progresses through full Cyber Kill Chain: Recon to Exfil.',
+    id: 'kill_chain', title: 'Full Attack Lifecycle',
+    description: 'Tracks a sophisticated attacker moving step-by-step from initial scanning all the way to stealing data.',
     icon: Crosshair, iconColor: 'text-red-400', cardBg: 'bg-red-50/60', borderColor: 'border-red-200',
     user: 'nathan.wilson', badge: 'RESEARCH',
     details: ['Full Lockheed Martin Kill Chain mapped', 'Recon to Lateral to Collection to Exfil', 'Real-time phase progression tracking'],
   },
   {
-    id: 'biometric_shift', title: 'Behavioral Biometrics',
-    description: 'Operator change on olivia.anderson — timing rhythm shifts mid-session.',
-    icon: Fingerprint, iconColor: 'text-indigo-400', cardBg: 'bg-indigo-50/60', borderColor: 'border-indigo-200',
-    user: 'olivia.anderson', badge: 'RESEARCH',
-    details: ['KL-divergence detects operator change', 'Action timing = biometric fingerprint', 'Mid-session tempo shift detected'],
-  },
-  {
-    id: 'coordinated_attack', title: 'Coordinated Attack (APT)',
-    description: '3 users compromised simultaneously — APT-style multi-account attack.',
+    id: 'coordinated_attack', title: 'Coordinated Attack (Multi-User)',
+    description: 'Detects multiple employee accounts being hacked at the exact same time by an organized group.',
     icon: Network, iconColor: 'text-rose-400', cardBg: 'bg-rose-50/60', borderColor: 'border-rose-200',
     user: 'karen + leo + mona', badge: 'RESEARCH',
     details: ['3 accounts compromised in 15-min window', 'Cross-user temporal correlation', 'APT group pattern detection'],
   },
   {
-    id: 'micro_burst', title: 'Micro-Burst Exfiltration',
-    description: 'User (paul.thomas) hides data theft in sub-60s bursts.',
+    id: 'micro_burst', title: '"Hit and Run" Data Theft',
+    description: 'Detects an attacker stealing data in tiny, hidden 10-second bursts to sneak past strict security rules.',
     icon: Flame, iconColor: 'text-orange-400', cardBg: 'bg-orange-50/60', borderColor: 'border-orange-200',
     user: 'paul.thomas', badge: 'RESEARCH',
     details: ['3 hidden bursts of 20MB in <60 seconds', 'Normal browsing between bursts', 'Burst-hide-burst evasion pattern'],
-  },
-  {
-    id: 'entropy_spike', title: 'Access Entropy Spike',
-    description: 'User (quinn.taylor) explores 20+ diverse resources — Shannon entropy spike.',
-    icon: BarChart3, iconColor: 'text-teal-400', cardBg: 'bg-teal-50/60', borderColor: 'border-teal-200',
-    user: 'quinn.taylor', badge: 'RESEARCH',
-    details: ['Shannon entropy spike vs baseline', '20+ unique resources (normal: 5-10)', 'Mathematical randomness detection'],
   },
 ];
 
@@ -143,7 +122,7 @@ export default function SimulationPanel({ onRefresh }) {
           {runAllActive ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Running {runAllProgress}/{SCENARIOS.length}...</>
           ) : (
-            <><Rocket className="w-4 h-4" /> Run All 12 Scenarios</>
+            <><Rocket className="w-4 h-4" /> Run All 9 Scenarios</>
           )}
         </button>
       </div>

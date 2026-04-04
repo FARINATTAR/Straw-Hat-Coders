@@ -112,6 +112,107 @@ def generate_normal_activity(db, user, base_date, num_days=30):
     return len(logs)
 
 
+def inject_mild_yellow(db, user, target_date):
+    """Yellow-level threat (score ~30-55): a few off-hours accesses and slightly elevated downloads.
+    Enough to raise suspicion but not a clear attack."""
+    logs = []
+    dept_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
+    reasons = "Off-hours activity with slightly elevated data transfer"
+
+    # Late night login (off-hours)
+    late_login = target_date.replace(hour=23, minute=random.randint(10, 50))
+    logs.append(ActivityLog(
+        user_id=user.id, username=user.username, timestamp=late_login,
+        action_type="login", resource="auth:main-portal",
+        ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
+        location=user.typical_location, device="Windows-Laptop-Corp",
+        data_volume_mb=0, session_duration_min=35,
+        is_anomalous=True, anomaly_reasons=reasons,
+    ))
+
+    # A few normal accesses plus some slightly larger downloads (own dept only)
+    for i in range(4):
+        logs.append(ActivityLog(
+            user_id=user.id, username=user.username,
+            timestamp=late_login + timedelta(minutes=random.randint(30, 120)),
+            action_type="file_access", resource=random.choice(dept_resources),
+            ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
+            location=user.typical_location, device="Windows-Laptop-Corp",
+            data_volume_mb=0, session_duration_min=0,
+            is_anomalous=True, anomaly_reasons=reasons,
+        ))
+
+    for i in range(3):
+        logs.append(ActivityLog(
+            user_id=user.id, username=user.username,
+            timestamp=late_login + timedelta(minutes=random.randint(45, 120)),
+            action_type="download", resource=random.choice(dept_resources),
+            ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
+            location=user.typical_location, device="Windows-Laptop-Corp",
+            data_volume_mb=round(random.uniform(1.0, 4.0), 2),
+            session_duration_min=0,
+            is_anomalous=True, anomaly_reasons=reasons,
+        ))
+
+    db.bulk_save_objects(logs)
+    db.commit()
+    return len(logs)
+
+
+def inject_mild_orange(db, user, target_date):
+    """Orange-level threat (score ~60-78): off-hours login from slightly unusual location
+    with some cross-department access. Clearly suspicious but not a full attack."""
+    logs = []
+    other_depts = [d for d in DEPARTMENTS if d != user.department]
+    dept_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
+    reasons = "Off-hours login from unusual location; cross-department access"
+
+    # Off-hours login from a different (but not anomalous) location
+    other_locations = [l for l in LOCATIONS if l != user.typical_location]
+    login_location = random.choice(other_locations)
+
+    t = target_date.replace(hour=22, minute=random.randint(0, 59))
+    logs.append(ActivityLog(
+        user_id=user.id, username=user.username, timestamp=t,
+        action_type="login", resource="auth:main-portal",
+        ip_address=f"192.168.{random.randint(50,99)}.{random.randint(1,254)}",
+        location=login_location, device="MacBook-Air-Corp",
+        data_volume_mb=0, session_duration_min=45,
+        is_anomalous=True, anomaly_reasons=reasons,
+    ))
+
+    # Some own-dept access (normal camouflage)
+    for i in range(4):
+        logs.append(ActivityLog(
+            user_id=user.id, username=user.username,
+            timestamp=t + timedelta(minutes=random.randint(10, 150)),
+            action_type="file_access", resource=random.choice(dept_resources),
+            ip_address=f"192.168.{random.randint(50,99)}.{random.randint(1,254)}",
+            location=login_location, device="MacBook-Air-Corp",
+            data_volume_mb=0, session_duration_min=0,
+            is_anomalous=False,
+        ))
+
+    # Cross-dept accesses (suspicious but limited and spread out)
+    for i in range(4):
+        dept = random.choice(other_depts)
+        logs.append(ActivityLog(
+            user_id=user.id, username=user.username,
+            timestamp=t + timedelta(minutes=random.randint(30, 150)),
+            action_type=random.choice(["file_access", "download"]),
+            resource=random.choice(RESOURCES[dept]),
+            ip_address=f"192.168.{random.randint(50,99)}.{random.randint(1,254)}",
+            location=login_location, device="MacBook-Air-Corp",
+            data_volume_mb=round(random.uniform(0.5, 3.0), 2),
+            session_duration_min=0,
+            is_anomalous=True, anomaly_reasons=reasons,
+        ))
+
+    db.bulk_save_objects(logs)
+    db.commit()
+    return len(logs)
+
+
 def inject_anomalies_data_exfiltrator(db, user, target_date):
     """Scenario 1: data exfiltration at unusual hours with bulk downloads."""
     logs = []
@@ -199,20 +300,20 @@ def inject_anomalies_compromised_account(db, user, target_date):
 
 
 def inject_anomalies_slow_insider(db, user, base_date):
-    """Scenario 3: gradually escalating access over 7 days."""
+    """Scenario 3: gradually escalating access over 4 days (mild orange-level threat)."""
     logs = []
     other_depts = [d for d in DEPARTMENTS if d != user.department]
 
-    for day in range(7):
-        current_date = base_date - timedelta(days=7 - day)
+    for day in range(4):
+        current_date = base_date - timedelta(days=4 - day)
         login_hour = user.typical_login_hour
         login_time = current_date.replace(hour=login_hour, minute=random.randint(0, 59))
 
-        extra_accesses = 2 + day * 3
-        reasons = f"Gradually escalating access pattern (day {day+1}/7); Cross-department resource access increasing"
+        extra_accesses = 1 + day  # 1, 2, 3, 4 — much milder escalation
+        reasons = f"Gradually escalating access pattern (day {day+1}/4); Cross-department resource access increasing"
 
         dept_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
-        for i in range(random.randint(5, 10)):
+        for i in range(random.randint(8, 15)):
             t = login_time + timedelta(minutes=random.randint(1, 400))
             logs.append(ActivityLog(
                 user_id=user.id, username=user.username, timestamp=t,
@@ -228,7 +329,7 @@ def inject_anomalies_slow_insider(db, user, base_date):
         for i in range(extra_accesses):
             dept = random.choice(other_depts)
             t = login_time + timedelta(minutes=random.randint(1, 400))
-            volume = round(random.uniform(0.5, 3.0 + day * 1.5), 2)
+            volume = round(random.uniform(0.3, 1.5), 2)
             logs.append(ActivityLog(
                 user_id=user.id, username=user.username, timestamp=t,
                 action_type=random.choice(["file_access", "download"]),
@@ -376,9 +477,9 @@ def inject_ghost_account(db, user, target_date):
 
 
 def inject_privilege_creep(db, user, target_date):
-    """Scenario 7: User accessing resources far outside their department role."""
+    """Scenario 7: User accessing resources outside their department role (moderate orange-level)."""
     logs = []
-    reasons = "Privilege creep: accessing resources from multiple departments outside assigned role"
+    reasons = "Privilege creep: accessing resources from other departments outside assigned role"
 
     other_depts = [d for d in DEPARTMENTS if d != user.department]
     t = target_date - timedelta(minutes=30)
@@ -392,22 +493,24 @@ def inject_privilege_creep(db, user, target_date):
         is_anomalous=True, anomaly_reasons=reasons,
     ))
 
+    # Only 3 cross-dept accesses per other department (milder)
     for dept in other_depts:
         dept_resources = RESOURCES[dept]
-        for i in range(8):
+        for i in range(3):
             logs.append(ActivityLog(
                 user_id=user.id, username=user.username,
                 timestamp=t + timedelta(minutes=random.randint(1, 55)),
-                action_type=random.choice(["file_access", "download", "api_call"]),
+                action_type=random.choice(["file_access", "api_call"]),
                 resource=random.choice(dept_resources),
                 ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
                 location=user.typical_location, device="Windows-Laptop-Corp",
-                data_volume_mb=round(random.uniform(0.5, 5.0), 2),
+                data_volume_mb=round(random.uniform(0.2, 1.5), 2),
                 session_duration_min=0, is_anomalous=True, anomaly_reasons=reasons,
             ))
 
+    # More normal own-department activity to dilute the ratio
     own_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
-    for i in range(3):
+    for i in range(10):
         logs.append(ActivityLog(
             user_id=user.id, username=user.username,
             timestamp=t + timedelta(minutes=random.randint(1, 55)),
@@ -476,9 +579,10 @@ def inject_kill_chain(db, user, target_date):
 
 
 def inject_biometric_shift(db, user, target_date):
-    """Scenario 9: Operator change mid-session — timing rhythm shifts abruptly."""
+    """Scenario 9: Mild operator change mid-session — yellow-level threat."""
     logs = []
     t = target_date - timedelta(minutes=40)
+    dept_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
 
     logs.append(ActivityLog(
         user_id=user.id, username=user.username, timestamp=t,
@@ -486,31 +590,32 @@ def inject_biometric_shift(db, user, target_date):
         ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
         location=user.typical_location, device="Windows-Laptop-Corp",
         data_volume_mb=0, session_duration_min=60,
-        is_anomalous=True, anomaly_reasons="Biometric shift: operator change detected",
+        is_anomalous=False,
     ))
+    # Normal first half
     for i in range(10):
         logs.append(ActivityLog(
             user_id=user.id, username=user.username,
             timestamp=t + timedelta(seconds=i * random.randint(120, 300)),
             action_type=random.choice(["file_access", "api_call"]),
-            resource=random.choice(RESOURCES.get(user.department, []) + RESOURCES["Shared"]),
+            resource=random.choice(dept_resources),
             ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
             location=user.typical_location, device="Windows-Laptop-Corp",
             data_volume_mb=round(random.uniform(0, 1.0), 2),
             session_duration_min=0, is_anomalous=False,
         ))
+    # Mild shift — slightly faster pace, same dept resources, small downloads
     shift_time = t + timedelta(minutes=20)
-    all_resources = [r for dept_res in RESOURCES.values() for r in dept_res]
-    for i in range(15):
+    for i in range(5):
         logs.append(ActivityLog(
             user_id=user.id, username=user.username,
-            timestamp=shift_time + timedelta(seconds=i * random.randint(5, 15)),
-            action_type="download", resource=random.choice(all_resources),
+            timestamp=shift_time + timedelta(seconds=i * random.randint(15, 40)),
+            action_type="download", resource=random.choice(dept_resources),
             ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
             location=user.typical_location, device="Windows-Laptop-Corp",
-            data_volume_mb=round(random.uniform(3.0, 15.0), 2),
+            data_volume_mb=round(random.uniform(1.0, 4.0), 2),
             session_duration_min=0, is_anomalous=True,
-            anomaly_reasons="Biometric shift: rapid-fire actions (different operator rhythm)",
+            anomaly_reasons="Biometric shift: pace change detected",
         ))
 
     db.bulk_save_objects(logs)
@@ -614,9 +719,10 @@ def inject_micro_burst(db, user, target_date):
 
 
 def inject_entropy_spike(db, user, target_date):
-    """Scenario 12: User suddenly accessing highly diverse unfamiliar resources."""
+    """Scenario 12: Mild entropy anomaly — yellow-level threat."""
     logs = []
     t = target_date - timedelta(minutes=30)
+    dept_resources = RESOURCES.get(user.department, []) + RESOURCES["Shared"]
 
     logs.append(ActivityLog(
         user_id=user.id, username=user.username, timestamp=t,
@@ -624,36 +730,41 @@ def inject_entropy_spike(db, user, target_date):
         ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
         location=user.typical_location, device="Windows-Laptop-Corp",
         data_volume_mb=0, session_duration_min=45,
-        is_anomalous=True, anomaly_reasons="Entropy spike: anomalous exploration pattern",
+        is_anomalous=False,
     ))
+
+    # Mostly normal activity with a few unfamiliar resources mixed in
+    for i in range(8):
+        logs.append(ActivityLog(
+            user_id=user.id, username=user.username,
+            timestamp=t + timedelta(minutes=random.randint(1, 28)),
+            action_type=random.choice(["file_access", "api_call"]),
+            resource=random.choice(dept_resources),
+            ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
+            location=user.typical_location, device="Windows-Laptop-Corp",
+            data_volume_mb=round(random.uniform(0.1, 1.0), 2),
+            session_duration_min=0, is_anomalous=False,
+        ))
 
     exotic_resources = [
         "file:ceo-personal-notes.docx", "db:legacy-customer-db",
         "repo:deprecated-auth-service", "file:board-strategy-2027.pdf",
         "cloud:gcp-billing-console", "db:production-backup-full",
         "file:pen-test-results-2025.pdf", "app:admin-dashboard-hidden",
-        "file:encryption-keys-backup.pem", "db:analytics-warehouse",
-        "repo:internal-security-tools", "file:ip-portfolio.xlsx",
-        "cloud:azure-key-vault", "app:vpn-admin-panel",
-        "file:disaster-recovery-plan.pdf", "db:gdpr-deletion-queue",
-        "repo:payment-gateway-v2", "file:vendor-contracts-all.zip",
-        "app:siem-log-portal", "file:source-code-audit.pdf",
-        "db:user-pii-archive", "cloud:aws-secrets-manager",
-        "file:competitive-analysis.xlsx", "repo:devops-credentials",
-        "app:root-cert-manager", "file:regulatory-filings-2026.pdf",
     ]
 
-    for i, resource in enumerate(exotic_resources):
+    # Only 4 unfamiliar accesses — enough for yellow, not red
+    for resource in random.sample(exotic_resources, 4):
         logs.append(ActivityLog(
             user_id=user.id, username=user.username,
             timestamp=t + timedelta(minutes=random.randint(1, 28)),
-            action_type=random.choice(["file_access", "download", "api_call"]),
+            action_type="file_access",
             resource=resource,
             ip_address=f"10.0.{random.randint(1,10)}.{random.randint(1,254)}",
             location=user.typical_location, device="Windows-Laptop-Corp",
-            data_volume_mb=round(random.uniform(0.5, 5.0), 2),
+            data_volume_mb=round(random.uniform(0.2, 1.5), 2),
             session_duration_min=0, is_anomalous=True,
-            anomaly_reasons="Entropy spike: accessing diverse unfamiliar resources",
+            anomaly_reasons="Entropy spike: accessing unfamiliar resources",
         ))
 
     db.bulk_save_objects(logs)
@@ -719,35 +830,47 @@ def generate_all_data():
     c = inject_coordinated_attack(db, now)
     print(f"  Injected {c} anomalous logs")
 
-    # ── ORANGE ZONE (Moderate-risk: ~4 users) ───────────────────────
-    print("Injecting anomaly scenario 3: Slow Insider (user: henry.davis)...")
-    insider = db.query(User).filter(User.username == "henry.davis").first()
-    if insider:
-        c = inject_anomalies_slow_insider(db, insider, now)
-        print(f"  Injected {c} anomalous logs")
-
+    # ── ORANGE ZONE (Moderate-risk: ~3 users) ───────────────────────
     print("Injecting anomaly scenario 7: Privilege Creep (user: ivy.rodriguez)...")
     priv_user = db.query(User).filter(User.username == "ivy.rodriguez").first()
     if priv_user:
         c = inject_privilege_creep(db, priv_user, now)
         print(f"  Injected {c} anomalous logs")
 
-    # ── YELLOW ZONE (Low-risk suspicious: ~4 users) ─────────────────
-    print("Injecting anomaly scenario 9: Biometric Shift (user: nathan.anderson)...")
-    bio_user = db.query(User).filter(User.username == "nathan.anderson").first()
+    print("Injecting anomaly scenario: Mild Orange (user: diana.brown)...")
+    staging_user = db.query(User).filter(User.username == "diana.brown").first()
+    if staging_user:
+        c = inject_mild_orange(db, staging_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    print("Injecting anomaly scenario: Mild Orange (user: paul.thomas)...")
+    burst_user = db.query(User).filter(User.username == "paul.thomas").first()
+    if burst_user:
+        c = inject_mild_orange(db, burst_user, now)
+        print(f"  Injected {c} anomalous logs")
+
+    # ── YELLOW ZONE (Low-risk suspicious: ~3 users) ─────────────────
+    print("Injecting anomaly scenario: Mild Yellow (user: henry.davis)...")
+    bio_user = db.query(User).filter(User.username == "henry.davis").first()
     if bio_user:
-        c = inject_biometric_shift(db, bio_user, now)
+        c = inject_mild_yellow(db, bio_user, now)
         print(f"  Injected {c} anomalous logs")
 
-    print("Injecting anomaly scenario 12: Entropy Spike (user: tina.martin)...")
-    entropy_user = db.query(User).filter(User.username == "tina.martin").first()
+    print("Injecting anomaly scenario: Mild Yellow (user: nathan.wilson)...")
+    entropy_user = db.query(User).filter(User.username == "nathan.wilson").first()
     if entropy_user:
-        c = inject_entropy_spike(db, entropy_user, now)
+        c = inject_mild_yellow(db, entropy_user, now)
         print(f"  Injected {c} anomalous logs")
 
-    # ── GREEN ZONE (Clean users: ~6 users) ──────────────────────────
-    # alice.smith, diana.brown, grace.miller, olivia.thomas, paul.taylor,
-    # quinn.moore, rachel.jackson, steve.martin → No anomalies injected
+    print("Injecting anomaly scenario: Mild Yellow (user: tina.martin)...")
+    insider = db.query(User).filter(User.username == "tina.martin").first()
+    if insider:
+        c = inject_mild_yellow(db, insider, now)
+        print(f"  Injected {c} anomalous logs")
+
+    # ── GREEN ZONE (Clean users: ~5 users) ──────────────────────────
+    # alice.smith, grace.miller, olivia.anderson, quinn.taylor,
+    # rachel.moore, steve.jackson → No anomalies injected
     print("Remaining users have only normal activity (GREEN zone).")
 
     final_count = db.query(ActivityLog).count()
