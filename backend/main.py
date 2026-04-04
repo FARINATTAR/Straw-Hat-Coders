@@ -365,7 +365,7 @@ def get_dashboard(db: Session = Depends(get_db)):
         "average_risk_score": avg_risk,
         "anomaly_rate": round(anomalous_logs / max(total_logs, 1) * 100, 1),
         "ghost_accounts": ghost_count,
-        "novel_detectors_active": 12,
+        "novel_detectors_active": 9,
     }
 
 
@@ -813,7 +813,7 @@ def generate_pdf_report(user_id: int, db: Session = Depends(get_db)):
 
     elements.append(Spacer(1, 20))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#e2e8f0')))
-    elements.append(Paragraph("SussedOut | Intelligent Zero Trust Security System | 12 AI Detection Engines | Straw Hat Coders", small_style))
+    elements.append(Paragraph("SussedOut | Intelligent Zero Trust Security System | 9 AI Detection Engines | Straw Hat Coders", small_style))
 
     doc.build(elements)
     buffer.seek(0)
