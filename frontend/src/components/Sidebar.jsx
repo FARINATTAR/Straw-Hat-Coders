@@ -17,7 +17,7 @@ export default function Sidebar({ page, setPage, isConnected }) {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">ZeroMind</h1>
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight">SussedOut</h1>
             <p className="text-[11px] text-slate-500 font-medium">Zero Trust Security</p>
           </div>
         </div>

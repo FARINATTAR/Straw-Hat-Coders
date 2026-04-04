@@ -27,7 +27,7 @@ from config import RISK_THRESHOLDS, HONEYPOT_RESOURCES
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Initializing ZeroMind...")
+    print("Initializing SussedOut...")
     init_db()
     generate_all_data()
     db = SessionLocal()
@@ -37,11 +37,11 @@ async def lifespan(app: FastAPI):
         analyze_all_users(db)
     finally:
         db.close()
-    print("ZeroMind ready!")
+    print("SussedOut ready!")
     yield
 
 
-app = FastAPI(title="ZeroMind - Zero Trust Security System", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="SussedOut - Zero Trust Security System", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -365,7 +365,7 @@ def get_dashboard(db: Session = Depends(get_db)):
         "average_risk_score": avg_risk,
         "anomaly_rate": round(anomalous_logs / max(total_logs, 1) * 100, 1),
         "ghost_accounts": ghost_count,
-        "novel_detectors_active": 12,
+        "novel_detectors_active": 9,
     }
 
 
@@ -706,7 +706,7 @@ def generate_pdf_report(user_id: int, db: Session = Depends(get_db)):
 
     elements = []
 
-    elements.append(Paragraph("ZEROMIND THREAT ASSESSMENT", title_style))
+    elements.append(Paragraph("SUSSEDOUT THREAT ASSESSMENT", title_style))
     elements.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')} | Intelligent Zero Trust Security System", subtitle_style))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
     elements.append(Spacer(1, 8))
@@ -813,7 +813,7 @@ def generate_pdf_report(user_id: int, db: Session = Depends(get_db)):
 
     elements.append(Spacer(1, 20))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#e2e8f0')))
-    elements.append(Paragraph("ZeroMind | Intelligent Zero Trust Security System | 12 AI Detection Engines | Straw Hat Coders", small_style))
+    elements.append(Paragraph("SussedOut | Intelligent Zero Trust Security System | 9 AI Detection Engines | Straw Hat Coders", small_style))
 
     doc.build(elements)
     buffer.seek(0)
@@ -821,7 +821,7 @@ def generate_pdf_report(user_id: int, db: Session = Depends(get_db)):
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=zeromind_report_{user.username}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=sussedout_report_{user.username}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"}
     )
 
 
