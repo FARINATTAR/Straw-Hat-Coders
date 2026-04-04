@@ -1,5 +1,5 @@
 """
-Novel engines that make ZeroMind genuinely unique.
+Novel engines that make SussedOut genuinely unique.
 These are research-grade techniques not found in typical hackathon projects.
 """
 

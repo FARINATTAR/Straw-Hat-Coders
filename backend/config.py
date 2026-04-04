@@ -1,6 +1,6 @@
 import os
 
-DATABASE_URL = "sqlite:///./zeromind.db"
+DATABASE_URL = "sqlite:///./sussedout.db"
 
 DEPARTMENTS = ["Engineering", "Finance", "HR"]
 ROLES = {
