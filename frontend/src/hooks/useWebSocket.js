@@ -7,8 +7,11 @@ export function useWebSocket() {
   const reconnectTimer = useRef(null);
 
   const connect = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const wsUrl = isProduction
+      ? 'wss://sussedout-backend.onrender.com/ws'
+      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       setIsConnected(true);
