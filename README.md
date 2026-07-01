@@ -14,6 +14,14 @@
 
 ---
 
+## 🔗 Live Demo Links
+
+* 💻 **Frontend Web App (Vercel):** [https://frontend-phi-ashy-42.vercel.app](https://frontend-phi-ashy-42.vercel.app)
+* ⚙️ **Backend API (Render):** [https://sussedout-backend.onrender.com](https://sussedout-backend.onrender.com)
+* 📖 **Interactive API Docs:** [https://sussedout-backend.onrender.com/docs](https://sussedout-backend.onrender.com/docs)
+
+---
+
 ## 📋 Problem Statement
 
 **PS0106** — Intelligent Zero Trust Security System with Anomaly Detection
