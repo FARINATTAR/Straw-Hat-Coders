@@ -51,18 +51,18 @@ export default function AlertPanel({ alerts, onRefresh, onUserClick }) {
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Security Alerts</h2>
           <p className="text-xs text-slate-400 mt-0.5">{alerts.length} total alerts</p>
         </div>
-        <button onClick={onRefresh} className="flex items-center gap-2 px-3.5 py-2 bg-white text-slate-600 rounded-xl hover:bg-slate-50 transition text-xs cursor-pointer border border-slate-200 font-medium">
+        <button onClick={onRefresh} className="flex items-center justify-center gap-2 px-3.5 py-2 bg-white text-slate-600 rounded-xl hover:bg-slate-50 transition text-xs cursor-pointer border border-slate-200 font-medium">
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>
 
       {/* Severity Filter Tabs */}
-      <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl w-full sm:w-fit overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {[
           { key: 'all', label: 'All' },
           { key: 'critical', label: 'Critical' },
@@ -74,7 +74,7 @@ export default function AlertPanel({ alerts, onRefresh, onUserClick }) {
           const count = tab.key === 'all' ? alerts.length : counts[tab.key];
           return (
             <button key={tab.key} onClick={() => setSeverityFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}>
               {tab.key !== 'all' && <span className={`w-1.5 h-1.5 rounded-full ${SEV_CONFIG[tab.key]?.dot}`} />}

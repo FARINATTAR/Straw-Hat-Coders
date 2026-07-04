@@ -261,7 +261,7 @@ export default function Analytics({ onUserClick }) {
 
       {/* Row 1: Risk Trend + Hourly Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up min-w-0">
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-500" /> Risk Score Trend
           </h3>
@@ -287,7 +287,7 @@ export default function Analytics({ onUserClick }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up" style={{ animationDelay: '50ms' }}>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up min-w-0" style={{ animationDelay: '50ms' }}>
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-violet-500" /> Activity by Hour
           </h3>
@@ -306,7 +306,7 @@ export default function Analytics({ onUserClick }) {
 
       {/* Row 2: Dept Radar + Action Pie */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up" style={{ animationDelay: '100ms' }}>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up min-w-0" style={{ animationDelay: '100ms' }}>
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-500" /> Department Risk
           </h3>
@@ -320,7 +320,7 @@ export default function Analytics({ onUserClick }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up" style={{ animationDelay: '150ms' }}>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-fade-up min-w-0" style={{ animationDelay: '150ms' }}>
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <PieIcon className="w-4 h-4 text-pink-500" /> Action Distribution
           </h3>
