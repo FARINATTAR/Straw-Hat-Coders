@@ -49,13 +49,13 @@ export default function UserList({ users, onUserClick }) {
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header Row */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Users</h2>
           <p className="text-xs text-slate-400 mt-0.5">{users.length} monitored accounts</p>
         </div>
         {/* Level Pills */}
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {(['red', 'orange', 'yellow', 'green']).map(lv => {
             const s = LEVEL_STYLE[lv];
             const active = levelFilter === lv;
@@ -73,7 +73,7 @@ export default function UserList({ users, onUserClick }) {
       </div>
 
       {/* Search */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
           <input
@@ -83,7 +83,7 @@ export default function UserList({ users, onUserClick }) {
           />
         </div>
         <button onClick={() => setShowFilters(!showFilters)}
-          className={`px-3.5 rounded-xl border transition cursor-pointer flex items-center gap-2 text-xs font-medium ${showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+          className={`py-2.5 sm:py-0 px-3.5 rounded-xl border transition cursor-pointer flex items-center justify-center gap-2 text-xs font-medium ${showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
           <Filter className="w-3.5 h-3.5" /> Filter
         </button>
       </div>
@@ -91,7 +91,7 @@ export default function UserList({ users, onUserClick }) {
       {showFilters && (
         <div className="flex gap-2 animate-fade-up">
           <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none cursor-pointer">
+            className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 focus:outline-none cursor-pointer">
             <option value="all">All Departments</option>
             {departments.map(d => <option key={d} value={d}>{d}</option>)}
           </select>

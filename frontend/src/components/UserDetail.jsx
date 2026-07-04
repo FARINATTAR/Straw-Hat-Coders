@@ -58,23 +58,23 @@ export default function UserDetail({ userId, onBack }) {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition cursor-pointer">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <button onClick={onBack} className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Back to Users
         </button>
-        <button onClick={() => window.open(`/api/report/${userId}`, '_blank')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition text-sm font-medium cursor-pointer shadow-sm">
+        <button onClick={() => window.open(`/api/report/${userId}`, '_blank')} className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition text-sm font-medium cursor-pointer shadow-sm">
           <Download className="w-4 h-4" /> Download Report
         </button>
       </div>
 
       {/* User Profile Header */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           <RiskGauge score={risk.score} level={risk.level} size={100} />
-          <div className="flex-1">
+          <div className="flex-1 text-center md:text-left">
             <h2 className="text-xl font-bold text-slate-900">{user.full_name}</h2>
             <p className="text-sm text-slate-500">@{user.username}</p>
-            <div className="flex flex-wrap items-center gap-2 mt-3">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
               <span className="text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-medium border border-blue-200">{user.department}</span>
               <span className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-medium">{user.role}</span>
               <span className="text-xs text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" /> {user.typical_login_hour}:00</span>
@@ -85,7 +85,7 @@ export default function UserDetail({ userId, onBack }) {
               </span>
             </div>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-center md:text-right shrink-0 md:ml-auto">
             <p className="text-xs text-slate-400 uppercase font-semibold">Action</p>
             <p className="text-sm text-slate-700 font-medium mt-1">{risk.action_taken}</p>
           </div>
